@@ -54,9 +54,46 @@ class payneteasyform
      */
     protected $_config = array();
 
+    /**
+     * Paynet order processor
+     *
+     * @var \PaynetEasy\Paynet\OrderProcessor
+     */
+    protected $_order_procesor;
+
     public function __construct()
     {
         $this->set_config();
+    }
+
+    /**
+     * Return payment method id and title for checkout form
+     *
+     * @return array
+     */
+    public function selection()
+    {
+        return array
+        (
+            'id'        => $this->code,
+            'module'    => $this->public_title
+        );
+    }
+
+    /**
+     * Return javascript code for front end order validation
+     *
+     * @return string
+     */
+    public function javascript_validation()
+    {
+    }
+
+    /**
+     * Check order data before confirmation
+     */
+    public function pre_confirmation_check()
+    {
     }
 
     /**
