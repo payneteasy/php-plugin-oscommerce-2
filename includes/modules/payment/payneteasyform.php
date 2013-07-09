@@ -1,5 +1,8 @@
 <?php
 
+use PaynetEasy\Paynet\PaynetDatabaseAggregate;
+use PaynetEasy\Paynet\PaynetPaymentAggregate;
+
 /**
  * Payment plugin for PaynetEasy
  */
@@ -55,15 +58,49 @@ class payneteasyform
     protected $_config = array();
 
     /**
-     * Paynet order processor
+     * Aggregate for different database operations for order
+     * For lazy load use payneteasyform::get_database_aggregate()
      *
-     * @var \PaynetEasy\Paynet\OrderProcessor
+     * @see payneteasyform::get_database_aggregate()
+     *
+     * @var \PaynetEasy\Paynet\PaynetDatabaseAggregate
      */
-    protected $_order_procesor;
+    protected $_database_aggregate;
 
+    /**
+     * Aggregate for payment by Paynet
+     * For lazy load use payneteasyform::get_payment_aggregate()
+     *
+     * @see payneteasyform::get_payment_aggregate()
+     *
+     * @var \PaynetEasy\Paynet\PaynetPaymentAggregate
+     */
+    protected $_payment_aggregate;
+
+    /**
+     * Set object public config fields.
+     * Set paynet library config to object property.
+     */
     public function __construct()
     {
-        $this->set_config();
+        $this->code         = 'payneteasyform';
+        $this->title        = MODULE_PAYMENT_PAYNETEASYFORM_TITLE;
+        $this->public_title = MODULE_PAYMENT_PAYNETEASYFORM_PUBLIC_TITLE;
+        $this->description  = MODULE_PAYMENT_PAYNETEASYFORM_DESCRIPTION;
+        $this->sort_order   = MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER;
+        $this->enabled      = MODULE_PAYMENT_PAYNETEASYFORM_STATUS == 'Yes';
+
+        $this->_config = array
+        (
+            'end_point'             => (int) MODULE_PAYMENT_PAYNETEASYFORM_END_POINT,
+            'login'                 => MODULE_PAYMENT_PAYNETEASYFORM_LOGIN,
+            'control'               => MODULE_PAYMENT_PAYNETEASYFORM_CONTROL,
+            'sandbox_gateway'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY,
+            'production_gateway'    => MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY,
+            'sandbox_enabled'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED === 'True',
+            'redirect_url'          => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
+            'server_callback_url'   => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
+        );
     }
 
     /**
@@ -90,10 +127,56 @@ class payneteasyform
     }
 
     /**
-     * Check order data before confirmation
+     * Check order data after payment method has been selected
      */
     public function pre_confirmation_check()
     {
+    }
+
+    /**
+     * Check or process order data before proceeding to payment confirmation
+     */
+    public function confirmation()
+    {
+    }
+
+    /**
+     * Return the html form hidden elements sent as POST data to the payment gateway
+     */
+    public function process_button()
+    {
+    }
+
+    /**
+     * Check order data before order finalising
+     */
+    public function before_process()
+    {
+    }
+
+    /**
+     * Method starts order processing in Paynet
+     * and redirect customer to Paynet gateway.
+     *
+     * :KLUDGE:         Imenem          09.07.13
+     *
+     * Method breaks original OsCommerce order processing flow.
+     */
+    public function after_process()
+    {
+        $order = $this->get_order();
+
+        $this
+            ->get_database_aggregate()
+            ->save_all_order_data($order)
+        ;
+
+        $response = $this
+            ->get_payment_aggregate()
+            ->start_sale($order);
+        ;
+
+        tep_redirect($response->getRedirectUrl());
     }
 
     /**
@@ -114,38 +197,38 @@ class payneteasyform
     public function install()
     {
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_STATUS',
-                               'Module enabled?',
-                               'Enable PaynetEasy payment form?',
-                               'No',
-                               "tep_cfg_select_option(array('Yes', 'No'), ");
+                                'Module enabled?',
+                                'Enable PaynetEasy payment form?',
+                                'No',
+                                "tep_cfg_select_option(array('Yes', 'No'), ");
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER',
-                               'Sort order',
-                               'Sort order of display. Lowest is displayed first.');
+                                'Sort order',
+                                'Sort order of display. Lowest is displayed first.');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_END_POINT',
-                               'End point',
-                               'End point for PaynetEasy gateway');
+                                'End point',
+                                'End point for PaynetEasy gateway');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_LOGIN',
-                               'Merchant login',
-                               'Merchant login for PaynetEasy');
+                                'Merchant login',
+                                'Merchant login for PaynetEasy');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_CONTROL',
-                               'Merchant control key',
-                               'Merchant control key for gateway queries sign');
+                                'Merchant control key',
+                                'Merchant control key for gateway queries sign');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY',
-                               'Sandbox gateway URL');
+                                'Sandbox gateway URL');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY',
-                               'Production gateway URL');
+                                'Production gateway URL');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED',
-                               'Sandbox enabled',
-                               'Disable sandbox mode for real order processing',
-                               'Yes',
-                               "tep_cfg_select_option(array('Yes', 'No'), ");
+                                'Sandbox enabled',
+                                'Disable sandbox mode for real order processing',
+                                'Yes',
+                                "tep_cfg_select_option(array('Yes', 'No'), ");
     }
 
     /**
@@ -153,7 +236,8 @@ class payneteasyform
      */
     public function remove()
     {
-        tep_db_query("DELETE FROM " . TABLE_CONFIGURATION . " WHERE `configuration_key` in ('" . implode("', '", $this->keys()) . "')");
+        tep_db_query("DELETE FROM " . TABLE_CONFIGURATION .
+                     " WHERE `configuration_key` in ('" . implode("', '", $this->keys()) . "')");
     }
 
     /**
@@ -173,30 +257,6 @@ class payneteasyform
             'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY',
             'MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY',
             'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED'
-        );
-    }
-
-    /**
-     * Set object public config fields.
-     * Set paynet library config to object property.
-     */
-    protected function set_config()
-    {
-        $this->code         = 'payneteasyform';
-        $this->title        = MODULE_PAYMENT_PAYNETEASYFORM_TITLE;
-        $this->public_title = MODULE_PAYMENT_PAYNETEASYFORM_PUBLIC_TITLE;
-        $this->description  = MODULE_PAYMENT_PAYNETEASYFORM_DESCRIPTION;
-        $this->sort_order   = MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER;
-        $this->enabled      = MODULE_PAYMENT_PAYNETEASYFORM_STATUS == 'Yes';
-
-        $this->_config = array
-        (
-            'end_point'             => (int) MODULE_PAYMENT_PAYNET_END_POINT,
-            'login'                 => MODULE_PAYMENT_PAYNET_LOGIN,
-            'control'               => MODULE_PAYMENT_PAYNET_CONTROL,
-            'sandbox_gateway'       => MODULE_PAYMENT_PAYNET_SANDBOX_GATEWAY,
-            'production_gateway'    => MODULE_PAYMENT_PAYNET_PRODUCTION_GATEWAY,
-            'sandbox_enabled'       => MODULE_PAYMENT_PAYNET_SANDBOX_ENABLED === 'True'
         );
     }
 
@@ -221,12 +281,54 @@ class payneteasyform
             'configuration_key'         => $key,
             'configuration_value'       => $value,
             'configuration_description' => $description,
-            'configuration_group_id'    =>  6,
+            'configuration_group_id'    => 6,
             'sort_order'                => $sort_order,
             'set_function'              => $function,
             'date_added'                => 'now()'
         ));
 
         ++$sort_order;
+    }
+
+    /**
+     * Get order
+     *
+     * @return      order
+     */
+    protected function get_order()
+    {
+        return $GLOBALS['order'];
+    }
+
+    /**
+     * Get aggregate for different database operations for order
+     *
+     * @return      \PaynetEasy\Paynet\PaynetDatabaseAggregate
+     */
+    protected function get_database_aggregate()
+    {
+        if (!$this->_database_aggregate)
+        {
+            require_once __DIR__ . '/payneteasy/paynet_database_aggregate.php';
+            $this->_database_aggregate = new PaynetDatabaseAggregate;
+        }
+
+        return $this->_database_aggregate;
+    }
+
+    /**
+     * Get aggregate for payment by Paynet
+     *
+     * @return      \PaynetEasy\Paynet\PaynetPaymentAggregate
+     */
+    protected function get_payment_aggregate()
+    {
+        if (!$this->_payment_aggregate)
+        {
+            require_once __DIR__ . '/payneteasy/paynet_payment_aggregate.php';
+            $this->_payment_aggregate = new PaynetPaymentAggregate($this->_config);
+        }
+
+        return $this->_payment_aggregate;
     }
 }
