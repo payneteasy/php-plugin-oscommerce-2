@@ -15,9 +15,6 @@ class PaynetDatabaseAggregate
      * - order totals
      * - order status history
      * - order products and their attributes
-     * Also method updates products statistics:
-     * - products quantity
-     * - products ordered count
      *
      * @param       order       $order          Order to save
      */
@@ -27,7 +24,6 @@ class PaynetDatabaseAggregate
         $this->insert_order_totals($order);
         $this->insert_order_status_history($order);
         $this->insert_order_products($order);
-        $this->update_products_statistics($order);
     }
 
     /**
@@ -83,7 +79,6 @@ class PaynetDatabaseAggregate
             'currency_value'              => $order->info['currency_value']
         ));
 
-        $order->customer['customer_id'] = $GLOBALS['customer_id'];
         $order->info['order_id']        = tep_db_insert_id();
     }
 
@@ -94,7 +89,7 @@ class PaynetDatabaseAggregate
      */
     public function insert_order_totals(OsCommerceOrder $order)
     {
-        foreach ($GLOBALS['order_totals'] as $order_total)
+        foreach ($order->totals as $order_total)
         {
             tep_db_perform(TABLE_ORDERS_TOTAL, array
             (
@@ -106,6 +101,19 @@ class PaynetDatabaseAggregate
                 'sort_order' => $order_total['sort_order']
             ));
         }
+    }
+
+    /**
+     * Method updates order status and insert new record to order status history
+     *
+     * @param       order       $order          Order
+     */
+    public function update_order_status(OsCommerceOrder $order)
+    {
+        tep_db_query("update " . TABLE_ORDERS . " set orders_status = '" . (int) $order->info['order_status'] .
+                     "' where orders_id = '" . (int) $order->info['order_id'] . "'");
+
+        $this->insert_order_status_history($order);
     }
 
     /**
@@ -299,7 +307,7 @@ class PaynetDatabaseAggregate
      */
     public function insert_product_attribute(OsCommerceOrder $order, array $product, array $attribute)
     {
-        $attribute_data = $this->select_attribute_data($product, $attribute);
+        $attribute_data = $this->select_attribute_data($order, $product, $attribute);
 
         if (empty($attribute_data))
         {
@@ -353,17 +361,18 @@ class PaynetDatabaseAggregate
      *     'price_prefix'                       => string
      * ]
      *
+     * @param       order       $order          Order
      * @param       array       $product        Product
      * @param       array       $attribute      Attribute
      *
      * @return      array                       Attribute data
      */
-    public function select_attribute_data(array $product, array $attribute)
+    public function select_attribute_data(OsCommerceOrder $order, array $product, array $attribute)
     {
         $product_id     = (int) $product['id'];
         $option_id      = (int) $attribute['option_id'];
         $value_id       = (int) $attribute['value_id'];
-        $language_id    = (int) $GLOBALS['languages_id'];
+        $language_id    = (int) $order->info['language_id'];
 
         if (DOWNLOAD_ENABLED == 'true')
         {

@@ -3,6 +3,8 @@
 use PaynetEasy\Paynet\PaynetDatabaseAggregate;
 use PaynetEasy\Paynet\PaynetPaymentAggregate;
 
+use order as OsCommerceOrder;
+
 /**
  * Payment plugin for PaynetEasy
  */
@@ -78,6 +80,13 @@ class payneteasyform
     protected $_payment_aggregate;
 
     /**
+     * Logger instance
+     *
+     * @var \logger
+     */
+    protected $_logger;
+
+    /**
      * Set object public config fields.
      * Set paynet library config to object property.
      */
@@ -89,18 +98,6 @@ class payneteasyform
         $this->description  = MODULE_PAYMENT_PAYNETEASYFORM_DESCRIPTION;
         $this->sort_order   = MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER;
         $this->enabled      = MODULE_PAYMENT_PAYNETEASYFORM_STATUS == 'Yes';
-
-        $this->_config = array
-        (
-            'end_point'             => (int) MODULE_PAYMENT_PAYNETEASYFORM_END_POINT,
-            'login'                 => MODULE_PAYMENT_PAYNETEASYFORM_LOGIN,
-            'control'               => MODULE_PAYMENT_PAYNETEASYFORM_CONTROL,
-            'sandbox_gateway'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY,
-            'production_gateway'    => MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY,
-            'sandbox_enabled'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED === 'True',
-            'redirect_url'          => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
-            'server_callback_url'   => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
-        );
     }
 
     /**
@@ -164,19 +161,44 @@ class payneteasyform
      */
     public function after_process()
     {
-        $order = $this->get_order();
+        $order      = $this->get_order();
 
         $this
             ->get_database_aggregate()
             ->save_all_order_data($order)
         ;
 
-        $response = $this
-            ->get_payment_aggregate()
-            ->start_sale($order);
-        ;
+        try
+        {
+            $response = $this
+                ->get_payment_aggregate()
+                ->start_sale($order, $this->get_return_url($order));
+            ;
+        }
+        catch (Exception $e)
+        {
+            $this->log_exception($e);
+            $this->cancel_order($order);
+            $this->error_redirect();
+        }
 
         tep_redirect($response->getRedirectUrl());
+    }
+
+    /**
+     * Return array with error message
+     * Error message array format:
+     * ['title' => string, 'error' => string]
+     *
+     * @return      array
+     */
+    public function get_error()
+    {
+        return array
+        (
+            'title' => MODULE_PAYMENT_PAYNETEASYFORM_NOT_PASSED,
+            'error' => urldecode($_REQUEST['error'])
+        );
     }
 
     /**
@@ -229,6 +251,20 @@ class payneteasyform
                                 'Disable sandbox mode for real order processing',
                                 'Yes',
                                 "tep_cfg_select_option(array('Yes', 'No'), ");
+
+        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SUCCESS_PAYMENT_ORDER_STATUS',
+                                'Order status after success payment',
+                                '',
+                                '',
+                                "tep_cfg_pull_down_order_statuses(",
+                                "tep_get_order_status_name");
+
+        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_ERROR_PAYMENT_ORDER_STATUS',
+                                'Order status after payment with error',
+                                '',
+                                '',
+                                "tep_cfg_pull_down_order_statuses(",
+                                "tep_get_order_status_name");
     }
 
     /**
@@ -256,7 +292,9 @@ class payneteasyform
             'MODULE_PAYMENT_PAYNETEASYFORM_CONTROL',
             'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY',
             'MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY',
-            'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED'
+            'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED',
+            'MODULE_PAYMENT_PAYNETEASYFORM_SUCCESS_PAYMENT_ORDER_STATUS',
+            'MODULE_PAYMENT_PAYNETEASYFORM_ERROR_PAYMENT_ORDER_STATUS'
         );
     }
 
@@ -269,9 +307,9 @@ class payneteasyform
      * @param           string      $title              Config field title
      * @param           string      $description        Config field description
      * @param           string      $default_value      Config field default value
-     * @param           string      $function           Function for config field display
+     * @param           string      $set_function           Function for config field display
      */
-    protected function add_config_field($key, $title, $description = '', $value = '', $function = '')
+    protected function add_config_field($key, $title, $description = '', $value = '', $set_function = '', $use_function = '')
     {
         static $sort_order = 1;
 
@@ -283,7 +321,8 @@ class payneteasyform
             'configuration_description' => $description,
             'configuration_group_id'    => 6,
             'sort_order'                => $sort_order,
-            'set_function'              => $function,
+            'set_function'              => $set_function,
+            'use_function'              => $use_function,
             'date_added'                => 'now()'
         ));
 
@@ -297,7 +336,68 @@ class payneteasyform
      */
     protected function get_order()
     {
-        return $GLOBALS['order'];
+        $order                          = $GLOBALS['order'];
+        $order->totals                  = $GLOBALS['order_totals'];
+        $order->customer['customer_id'] = $GLOBALS['customer_id'];
+        $order->info['language_id']     = $GLOBALS['languages_id'];
+
+        return $order;
+    }
+
+    /**
+     * Get URL for final order processing
+     *
+     * @param       OsCommerceOrder         $order      Order
+     *
+     * @return      string
+     */
+    protected function get_return_url(OsCommerceOrder $order)
+    {
+        return tep_href_link('ext/modules/payment/payneteasyform/sale_finisher.php',
+                             "order_id={$order->info['order_id']}",
+                             'SSL');
+    }
+
+    /**
+     * Log exception message
+     *
+     * @param       Exception       $error      Exception to log
+     */
+    protected function log_exception(Exception $error)
+    {
+        if (!isset($this->_logger))
+        {
+            $this->_logger = new logger;
+        }
+
+        $this->_logger->write($error->getMessage(), 'ERROR');
+    }
+
+    /**
+     * Cancel order
+     *
+     * @param       OsCommerceOrder         $order              Order
+     */
+    protected function cancel_order(OsCommerceOrder $order)
+    {
+        $order->info['order_status']    = MODULE_PAYMENT_PAYNETEASYFORM_ERROR_PAYMENT_ORDER_STATUS;
+        $order->info['comments']        = MODULE_PAYMENT_PAYNETEASYFORM_TECHNICAL_ERROR;
+
+        $this
+            ->get_database_aggregate()
+            ->update_order_status($order)
+        ;
+    }
+
+    /**
+     * Redirect customer to payment result page with error message
+     *
+     * @param       string      $error_message      Error message
+     */
+    protected function error_redirect($message = MODULE_PAYMENT_PAYNETEASYFORM_TECHNICAL_ERROR)
+    {
+        $params  = 'payment_error=' . $this->code . '&error=' . urlencode($message);
+        tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, $params, 'SSL'));
     }
 
     /**
@@ -309,7 +409,7 @@ class payneteasyform
     {
         if (!$this->_database_aggregate)
         {
-            require_once __DIR__ . '/payneteasy/paynet_database_aggregate.php';
+            require_once __DIR__ . '/payneteasyform/paynet_database_aggregate.php';
             $this->_database_aggregate = new PaynetDatabaseAggregate;
         }
 
@@ -325,8 +425,8 @@ class payneteasyform
     {
         if (!$this->_payment_aggregate)
         {
-            require_once __DIR__ . '/payneteasy/paynet_payment_aggregate.php';
-            $this->_payment_aggregate = new PaynetPaymentAggregate($this->_config);
+            require_once __DIR__ . '/payneteasyform/paynet_payment_aggregate.php';
+            $this->_payment_aggregate = new PaynetPaymentAggregate;
         }
 
         return $this->_payment_aggregate;

@@ -17,13 +17,6 @@ use PaynetEasy\Paynet\OrderProcessor;
 class PaynetPaymentAggregate
 {
     /**
-     * Paynet payment query config
-     *
-     * @var array
-     */
-    protected $_query_config;
-
-    /**
      * Order processor instance.
      * For lazy loading use PaynetEasyFormAggregate::get_order_processor()
      *
@@ -34,33 +27,38 @@ class PaynetPaymentAggregate
     protected $_order_procesor;
 
     /**
-     * @param       array       $query_config       Paynet payment query config
-     */
-    public function __construct(array $query_config)
-    {
-        $this->_query_config = $query_config;
-    }
-
-    /**
      * Starts order processing.
      * Method executes query to paynet gateway and returns response from gateway.
      * After that user must be redirected to the Response::getRedirectUrl()
      *
      * @param       order           $oscommerce_order                   OsCommerce order
+     * @param       string          $return_url                         Url for order processing after payment
      *
      * @return      \PaynetEasy\Paynet\Transport\Response               Gateway response object
      */
-    public function start_sale(OsCommerceOrder $oscommerce_order)
+    public function start_sale(OsCommerceOrder $oscommerce_order, $return_url)
     {
         $paynet_order = $this->get_paynet_order($oscommerce_order);
 
         return $this
             ->get_order_processor()
-            ->executeQuery('sale-form', $this->_query_config, $paynet_order);
+            ->executeQuery('sale-form', $this->get_config($return_url), $paynet_order);
     }
 
-    public function finish_sale()
+    /**
+     *
+     * @param       order           $oscommerce_order                   OsCommerce order
+     * @param       array           $callback_data                      Callback data from paynet
+     *
+     * @return      \PaynetEasy\Paynet\Transport\CallbackResponse       Callback object
+     */
+    public function finish_sale(OsCommerceOrder $oscommerce_order, array $callback_data)
     {
+        $paynet_order = $this->get_paynet_order($oscommerce_order);
+
+        return $this
+            ->get_order_processor()
+            ->executeCallback($callback_data, $this->get_config(), $paynet_order);
     }
 
     /**
@@ -94,16 +92,17 @@ class PaynetPaymentAggregate
 
         $paynet_order
             ->setClientOrderId($oscommerce_order->info['order_id'])
-            /**
-             * @todo Change to real order data
-             */
-            ->setPaynetOrderId(uniqid())
             ->setDescription($this->get_paynet_order_description($oscommerce_order))
             ->setAmount($oscommerce_order->info['total'])
             ->setCurrency($oscommerce_order->info['currency'])
             ->setIpAddress(tep_get_ip_address())
             ->setCustomer($paynet_customer)
         ;
+
+        if (isset ($oscommerce_order->info['paynet_order_id']))
+        {
+            $paynet_order->setPaynetOrderId($oscommerce_order->info['paynet_order_id']);
+        }
 
         return $paynet_order;
     }
@@ -130,18 +129,43 @@ class PaynetPaymentAggregate
     {
         if (!$this->_order_procesor)
         {
-            if ($this->_query_config['sandbox_enabled'])
+            $config = $this->get_config();
+
+            if ($config['sandbox_enabled'])
             {
-                $gateway_url = $this->_query_config['sandbox_gateway'];
+                $gateway_url = $config['sandbox_gateway'];
             }
             else
             {
-                $gateway_url = $this->_query_config['production_gateway'];
+                $gateway_url = $config['production_gateway'];
             }
 
             $this->_order_procesor = new OrderProcessor($gateway_url);
         }
 
         return $this->_order_procesor;
+    }
+
+    protected function get_config($return_url = '')
+    {
+        $config = array
+        (
+            'end_point'             => (int) MODULE_PAYMENT_PAYNETEASYFORM_END_POINT,
+            'login'                 => MODULE_PAYMENT_PAYNETEASYFORM_LOGIN,
+            'control'               => MODULE_PAYMENT_PAYNETEASYFORM_CONTROL,
+            'sandbox_gateway'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY,
+            'production_gateway'    => MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY,
+            'sandbox_enabled'       => MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED === 'True',
+            'redirect_url'          => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
+            'server_callback_url'   => tep_href_link(FILENAME_CHECKOUT_PROCESS, '', 'SSL'),
+        );
+
+        if (!empty($return_url))
+        {
+            $config['redirect_url']         = $return_url;
+            $config['server_callback_url']  = $return_url;
+        }
+
+        return $config;
     }
 }
