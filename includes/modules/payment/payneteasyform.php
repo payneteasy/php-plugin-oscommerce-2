@@ -1,7 +1,7 @@
 <?php
 
-use PaynetEasy\Paynet\PaynetDatabaseAggregate;
-use PaynetEasy\Paynet\PaynetPaymentAggregate;
+use PaynetEasy\PaynetEasyApi\PaynetDatabaseAggregate;
+use PaynetEasy\PaynetEasyApi\PaynetPaymentAggregate;
 
 use order as OsCommerceOrder;
 
@@ -65,7 +65,7 @@ class payneteasyform
      *
      * @see payneteasyform::get_database_aggregate()
      *
-     * @var \PaynetEasy\Paynet\PaynetDatabaseAggregate
+     * @var \PaynetEasy\PaynetEasyApi\PaynetDatabaseAggregate
      */
     protected $_database_aggregate;
 
@@ -75,7 +75,7 @@ class payneteasyform
      *
      * @see payneteasyform::get_payment_aggregate()
      *
-     * @var \PaynetEasy\Paynet\PaynetPaymentAggregate
+     * @var \PaynetEasy\PaynetEasyApi\PaynetPaymentAggregate
      */
     protected $_payment_aggregate;
 
@@ -403,7 +403,7 @@ class payneteasyform
     /**
      * Get aggregate for different database operations for order
      *
-     * @return      \PaynetEasy\Paynet\PaynetDatabaseAggregate
+     * @return      \PaynetEasy\PaynetEasyApi\PaynetDatabaseAggregate
      */
     protected function get_database_aggregate()
     {
@@ -419,7 +419,7 @@ class payneteasyform
     /**
      * Get aggregate for payment by Paynet
      *
-     * @return      \PaynetEasy\Paynet\PaynetPaymentAggregate
+     * @return      \PaynetEasy\PaynetEasyApi\PaynetPaymentAggregate
      */
     protected function get_payment_aggregate()
     {

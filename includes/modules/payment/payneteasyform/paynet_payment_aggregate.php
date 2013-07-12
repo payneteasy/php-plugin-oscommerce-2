@@ -1,15 +1,15 @@
 <?php
 
-namespace PaynetEasy\Paynet;
+namespace PaynetEasy\PaynetEasyApi;
 
 require_once DIR_FS_CATALOG . 'vendor/autoload.php';
 
 use order                                   as OsCommerceOrder;
 
-use PaynetEasy\Paynet\OrderData\Order       as PaynetOrder;
-use PaynetEasy\Paynet\OrderData\Customer    as PaynetCustomer;
+use PaynetEasy\PaynetEasyApi\OrderData\Order       as PaynetOrder;
+use PaynetEasy\PaynetEasyApi\OrderData\Customer    as PaynetCustomer;
 
-use PaynetEasy\Paynet\OrderProcessor;
+use PaynetEasy\PaynetEasyApi\OrderProcessor;
 
 /**
  * Aggregate for payment by Paynet
@@ -22,7 +22,7 @@ class PaynetPaymentAggregate
      *
      * @see PaynetEasyFormAggregate::get_order_processor()
      *
-     * @var \PaynetEasy\Paynet\OrderProcessor
+     * @var \PaynetEasy\PaynetEasyApi\OrderProcessor
      */
     protected $_order_procesor;
 
@@ -34,7 +34,7 @@ class PaynetPaymentAggregate
      * @param       order           $oscommerce_order                   OsCommerce order
      * @param       string          $return_url                         Url for order processing after payment
      *
-     * @return      \PaynetEasy\Paynet\Transport\Response               Gateway response object
+     * @return      \PaynetEasy\PaynetEasyApi\Transport\Response               Gateway response object
      */
     public function start_sale(OsCommerceOrder $oscommerce_order, $return_url)
     {
@@ -50,7 +50,7 @@ class PaynetPaymentAggregate
      * @param       order           $oscommerce_order                   OsCommerce order
      * @param       array           $callback_data                      Callback data from paynet
      *
-     * @return      \PaynetEasy\Paynet\Transport\CallbackResponse       Callback object
+     * @return      \PaynetEasy\PaynetEasyApi\Transport\CallbackResponse       Callback object
      */
     public function finish_sale(OsCommerceOrder $oscommerce_order, array $callback_data)
     {
@@ -66,7 +66,7 @@ class PaynetPaymentAggregate
      *
      * @param       order           $oscommerce_order                   OsCommerce order
      *
-     * @return      \PaynetEasy\Paynet\OrderData\Order                  Paynet order
+     * @return      \PaynetEasy\PaynetEasyApi\OrderData\Order                  Paynet order
      */
     protected function get_paynet_order(OsCommerceOrder $oscommerce_order)
     {
@@ -123,7 +123,7 @@ class PaynetPaymentAggregate
     /**
      * Get service for order processing
      *
-     * @return      \PaynetEasy\Paynet\OrderProcessor
+     * @return      \PaynetEasy\PaynetEasyApi\OrderProcessor
      */
     protected function get_order_processor()
     {

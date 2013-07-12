@@ -1,6 +1,6 @@
 <?php
 
-namespace PaynetEasy\Paynet;
+namespace PaynetEasy\PaynetEasyApi;
 
 use order as OsCommerceOrder;
 

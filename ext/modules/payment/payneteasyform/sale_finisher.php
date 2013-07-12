@@ -1,6 +1,6 @@
 <?php
 
-namespace PaynetEasy\Paynet;
+namespace PaynetEasy\PaynetEasyApi;
 
 chdir('../../../../');
 
@@ -26,7 +26,7 @@ class SaleFinisher
      *
      * @see SaleFinisher::get_database_aggregate()
      *
-     * @var \PaynetEasy\Paynet\PaynetDatabaseAggregate
+     * @var \PaynetEasy\PaynetEasyApi\PaynetDatabaseAggregate
      */
     protected $_database_aggregate;
 
@@ -36,7 +36,7 @@ class SaleFinisher
      *
      * @see SaleFinisher::get_payment_aggregate()
      *
-     * @var \PaynetEasy\Paynet\PaynetPaymentAggregate
+     * @var \PaynetEasy\PaynetEasyApi\PaynetPaymentAggregate
      */
     protected $_payment_aggregate;
 
@@ -46,7 +46,7 @@ class SaleFinisher
      *
      * @see SaleFinisher::get_mailer_aggregate()
      *
-     * @var \PaynetEasy\Paynet\PaynetMailerAggregate
+     * @var \PaynetEasy\PaynetEasyApi\PaynetMailerAggregate
      */
     protected $_mailer_aggregate;
 
@@ -204,7 +204,7 @@ class SaleFinisher
     /**
      * Get aggregate for different database operations for order
      *
-     * @return      \PaynetEasy\Paynet\PaynetDatabaseAggregate
+     * @return      \PaynetEasy\PaynetEasyApi\PaynetDatabaseAggregate
      */
     protected function get_database_aggregate()
     {
@@ -220,7 +220,7 @@ class SaleFinisher
     /**
      * Get aggregate for payment by Paynet
      *
-     * @return      \PaynetEasy\Paynet\PaynetPaymentAggregate
+     * @return      \PaynetEasy\PaynetEasyApi\PaynetPaymentAggregate
      */
     protected function get_payment_aggregate()
     {
@@ -236,7 +236,7 @@ class SaleFinisher
     /**
      * Get aggregate for customer notifying after order changing
      *
-     * @return      \PaynetEasy\Paynet\PaynetMailerAggregate
+     * @return      \PaynetEasy\PaynetEasyApi\PaynetMailerAggregate
      */
     protected function get_mailer_aggregate()
     {
