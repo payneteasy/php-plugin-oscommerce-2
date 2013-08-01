@@ -236,9 +236,9 @@ class payneteasyform
                                 'Merchant login',
                                 'Merchant login for PaynetEasy');
 
-        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_CONTROL',
-                                'Merchant control key',
-                                'Merchant control key for gateway queries sign');
+        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SIGNING_KEY',
+                                'Merchant signing key',
+                                'Merchant key for gateway queries sign');
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY',
                                 'Sandbox gateway URL');
@@ -246,11 +246,11 @@ class payneteasyform
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY',
                                 'Production gateway URL');
 
-        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED',
-                                'Sandbox enabled',
-                                'Disable sandbox mode for real order processing',
-                                'Yes',
-                                "tep_cfg_select_option(array('Yes', 'No'), ");
+        $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_GATEWAY_MODE',
+                                'Gateway mode',
+                                'Select production mode for real order processing',
+                                'sandbox',
+                                "tep_cfg_select_option(array('sandbox', 'production'), ");
 
         $this->add_config_field('MODULE_PAYMENT_PAYNETEASYFORM_SUCCESS_PAYMENT_ORDER_STATUS',
                                 'Order status after success payment',
@@ -289,10 +289,10 @@ class payneteasyform
             'MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER',
             'MODULE_PAYMENT_PAYNETEASYFORM_END_POINT',
             'MODULE_PAYMENT_PAYNETEASYFORM_LOGIN',
-            'MODULE_PAYMENT_PAYNETEASYFORM_CONTROL',
+            'MODULE_PAYMENT_PAYNETEASYFORM_SIGNING_KEY',
             'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_GATEWAY',
             'MODULE_PAYMENT_PAYNETEASYFORM_PRODUCTION_GATEWAY',
-            'MODULE_PAYMENT_PAYNETEASYFORM_SANDBOX_ENABLED',
+            'MODULE_PAYMENT_PAYNETEASYFORM_GATEWAY_MODE',
             'MODULE_PAYMENT_PAYNETEASYFORM_SUCCESS_PAYMENT_ORDER_STATUS',
             'MODULE_PAYMENT_PAYNETEASYFORM_ERROR_PAYMENT_ORDER_STATUS'
         );
@@ -367,6 +367,7 @@ class payneteasyform
     {
         if (!isset($this->_logger))
         {
+            require(DIR_WS_CLASSES . 'logger.php');
             $this->_logger = new logger;
         }
 
