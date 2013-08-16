@@ -371,7 +371,7 @@ class payneteasyform
             $this->_logger = new logger;
         }
 
-        $this->_logger->write($error->getMessage(), 'ERROR');
+        $this->_logger->write((string) $error, 'ERROR');
     }
 
     /**

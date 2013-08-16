@@ -27,10 +27,9 @@
 
 ### Самостоятельная сборка пакета
 1. [Установите composer](http://getcomposer.org/doc/00-intro.md), если его еще нет
-2. Клонируйте репозиторий с плагином: `composer create-project payneteasy/php-plugin-oscommerce-2`
+2. Клонируйте репозиторий с плагином: `composer create-project payneteasy/php-plugin-oscommerce-2 --stability=dev --prefer-dist`
 3. Перейдите в папку плагина: `cd php-plugin-oscommerce-2`
-4. Установите зависимости плагина: `composer install --prefer-dist --optimize-autoloader`
-5. Упакуйте плагин в архив: `composer archive --format=zip`
+4. Упакуйте плагин в архив: `composer archive --format=zip`
 
 ## Установка плагина
 
