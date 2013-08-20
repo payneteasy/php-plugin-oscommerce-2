@@ -34,7 +34,7 @@ class PaynetPaymentAggregate
 
     /**
      * Starts order processing.
-     * Method executes query to paynet gateway and returns response from gateway.
+     * Method executes query to PaynetEasy gateway and returns response from gateway.
      * After that user must be redirected to the Response::getRedirectUrl()
      *
      * @param       order           $oscommerce_order                   OsCommerce order
@@ -69,12 +69,12 @@ class PaynetPaymentAggregate
     }
 
     /**
-     * Transform OsCommerce order to Paynet order
+     * Transform OsCommerce order to PaynetEasy order
      *
      * @param       order           $oscommerce_order       OsCommerce order
      * @param       string          $redirect_url           Url for final payment processing
      *
-     * @return      PaymentTransaction                      Paynet transaction
+     * @return      PaymentTransaction                      PaynetEasy transaction
      */
     protected function get_paynet_transaction(OsCommerceOrder $oscommerce_order, $redirect_url = null)
     {
@@ -146,7 +146,7 @@ class PaynetPaymentAggregate
     }
 
     /**
-     * Get Paynet order description
+     * Get PaynetEasy order description
      *
      * @param           order           $oscommerce_order       OsCommerce order
      *

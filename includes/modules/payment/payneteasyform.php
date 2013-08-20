@@ -53,7 +53,7 @@ class payneteasyform
     public $enabled;
 
     /**
-     * Paynet library config
+     * PaynetEasy library config
      *
      * @var array
      */
@@ -88,7 +88,6 @@ class payneteasyform
 
     /**
      * Set object public config fields.
-     * Set paynet library config to object property.
      */
     public function __construct()
     {
@@ -153,11 +152,17 @@ class payneteasyform
 
     /**
      * Method starts order processing in Paynet
-     * and redirect customer to Paynet gateway.
+     * and redirect customer to PaynetEasy gateway.
      *
      * :KLUDGE:         Imenem          09.07.13
      *
-     * Method breaks original OsCommerce order processing flow.
+     * Method breaks original OsCommerce order processing flow:
+     * - Get order from $GLOBALS
+     * - Save order data to database
+     * - Start order processing in PaynetEasy
+     * - Redirect customer to PaynetEasy payment form
+     * After PaynetEasy payment form submit customer returns
+     * to ext/modules/payment/payneteasyform/sale_finisher.php
      */
     public function after_process()
     {
