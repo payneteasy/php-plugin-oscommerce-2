@@ -168,10 +168,18 @@ class payneteasyform
     {
         $order      = $this->get_order();
 
-        $this
-            ->get_database_aggregate()
-            ->save_all_order_data($order)
-        ;
+        if (!empty($GLOBALS['insert_id']))
+        {
+            // checkout_process.php has already saved the order
+            $order->info['order_id'] = (int) $GLOBALS['insert_id'];
+        }
+        else
+        {
+            $this
+                ->get_database_aggregate()
+                ->save_all_order_data($order)
+            ;
+        }
 
         try
         {
@@ -370,13 +378,8 @@ class payneteasyform
      */
     protected function log_exception(Exception $error)
     {
-        if (!isset($this->_logger))
-        {
-            require(DIR_WS_CLASSES . 'logger.php');
-            $this->_logger = new logger;
-        }
-
-        $this->_logger->write((string) $error, 'ERROR');
+        // The catalog has no logger class: write to the PHP error log
+        error_log('PaynetEasy: ' . (string) $error);
     }
 
     /**
