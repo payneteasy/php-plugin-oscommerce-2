@@ -1,7 +1,6 @@
 {
     "name": "payneteasy/php-plugin-oscommerce-2",
     "description": "Plugin for OsCommerce 2 for payment by PaynetEasy.",
-    "version": "1.0.0-dev",
     "type": "library",
     "keywords":
     [
@@ -20,10 +19,18 @@
         }
     ],
     "minimum-stability": "dev",
+    "prefer-stable": true,
+    "repositories":
+    [
+        {
+            "type": "vcs",
+            "url":  "https://github.com/payneteasy/php-library-payneteasy-api"
+        }
+    ],
     "require":
     {
-        "php":                                      ">=5.3.0",
-        "payneteasy/php-library-payneteasy-api":    "~1.0"
+        "php":                                      ">=7.1.0",
+        "payneteasy/php-library-payneteasy-api":    "^1.1"
     },
     "archive":
     {
@@ -42,7 +49,7 @@
     {
         "branch-alias":
         {
-            "dev-master": "1.0.0-dev"
+            "dev-master": "1.1.x-dev"
         }
     }
 }
