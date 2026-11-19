@@ -14,13 +14,6 @@ use order as OsCommerceOrder;
 class SaleFinisher
 {
     /**
-     * Logger instance
-     *
-     * @var \logger
-     */
-    protected $_logger;
-
-    /**
      * Aggregate for different database operations for order
      * For lazy load use SaleFinisher::get_database_aggregate()
      *
@@ -196,7 +189,7 @@ class SaleFinisher
             ->send_order_update_email($order)
         ;
 
-        $this->clear_cart();
+        $this->clear_cart($order);
     }
 
     /**
@@ -219,10 +212,25 @@ class SaleFinisher
     }
 
     /**
-     * Method clears shopping cart
+     * Method clears shopping cart of the order customer
+     *
+     * The gateway returns the customer with a cross-site POST,
+     * which may come without the shop session: the saved cart is cleared too.
+     *
+     * @param       order       $order              Order
      */
-    protected function clear_cart()
+    protected function clear_cart(OsCommerceOrder $order)
     {
+        $row = tep_db_fetch_array(tep_db_query(
+            "select customers_id from " . TABLE_ORDERS . " where orders_id = '" . (int) $order->info['order_id'] . "'"
+        ));
+
+        if (!empty($row['customers_id']))
+        {
+            tep_db_query("delete from " . TABLE_CUSTOMERS_BASKET . " where customers_id = '" . (int) $row['customers_id'] . "'");
+            tep_db_query("delete from " . TABLE_CUSTOMERS_BASKET_ATTRIBUTES . " where customers_id = '" . (int) $row['customers_id'] . "'");
+        }
+
         $GLOBALS['cart']->reset(true);
 
         tep_session_unregister('sendto');
@@ -239,13 +247,8 @@ class SaleFinisher
      */
     protected function log_exception(\Exception $error)
     {
-        if (!isset($this->_logger))
-        {
-            require_once DIR_WS_CLASSES . 'logger.php';
-            $this->_logger = new \logger;
-        }
-
-        $this->_logger->write($error->getMessage(), 'ERROR');
+        // The catalog has no logger class: write to the PHP error log
+        error_log('PaynetEasy: ' . $error->getMessage());
     }
 
     /**
