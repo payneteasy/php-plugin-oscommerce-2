@@ -2,6 +2,21 @@
 
 namespace PaynetEasy\PaynetEasyApi;
 
+/*
+ * The gateway returns the customer with a cross-site POST, which carries no
+ * SameSite=Lax shop cookie: the shop would start a new session and the customer
+ * would lose the login and the cart. Re-issue the request as a GET to this URL
+ * (with the gateway fields in the query) before the shop starts a session.
+ */
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST))
+{
+    $query = array_merge($_GET, $_POST);
+    unset($query['osCsid']);
+
+    header('Location: ' . $_SERVER['SCRIPT_NAME'] . '?' . http_build_query($query), true, 303);
+    exit;
+}
+
 chdir('../../../../');
 
 require_once 'includes/application_top.php';
