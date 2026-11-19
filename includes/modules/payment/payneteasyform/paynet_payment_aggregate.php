@@ -11,7 +11,7 @@ use PaynetEasy\PaynetEasyApi\PaymentData\Payment;
 use PaynetEasy\PaynetEasyApi\PaymentData\Customer;
 use PaynetEasy\PaynetEasyApi\PaymentData\BillingAddress;
 
-use PaynetEasy\PaynetEasyApi\Utils\Validator;
+use PaynetEasy\PaynetEasyApi\Util\Validator;
 use PaynetEasy\PaynetEasyApi\PaymentData\QueryConfig;
 use PaynetEasy\PaynetEasyApi\Transport\CallbackResponse;
 
@@ -92,12 +92,17 @@ class PaynetPaymentAggregate
 
         $paynet_address
             ->setCountry($oscommerce_customer['country']['iso_code_2'])
-            ->setState($state_code)
             ->setCity($oscommerce_customer['city'])
             ->setFirstLine($oscommerce_customer['street_address'])
             ->setZipCode($oscommerce_customer['postcode'])
             ->setPhone($oscommerce_customer['telephone'])
         ;
+
+        // The gateway accepts only US and Canada state codes
+        if (Validator::validateByRule($state_code, Validator::STATE, false))
+        {
+            $paynet_address->setState($state_code);
+        }
 
         $paynet_customer
             ->setEmail($oscommerce_customer['email_address'])
@@ -165,11 +170,11 @@ class PaynetPaymentAggregate
      */
     protected function get_payment_processor()
     {
-        if (!$this->_order_procesor)
+        if (!$this->_payment_procesor)
         {
-            $this->_order_procesor = new PaymentProcessor;
+            $this->_payment_procesor = new PaymentProcessor;
         }
 
-        return $this->_order_procesor;
+        return $this->_payment_procesor;
     }
 }
