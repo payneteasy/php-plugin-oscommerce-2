@@ -207,10 +207,15 @@ class payneteasyform
      */
     public function get_error()
     {
+        // The request carries only an error code, the text comes from the language file
+        $code = isset($_REQUEST['error']) ? (string) $_REQUEST['error'] : '';
+
         return array
         (
             'title' => MODULE_PAYMENT_PAYNETEASYFORM_NOT_PASSED,
-            'error' => urldecode($_REQUEST['error'])
+            'error' => $code === 'declined'
+                     ? MODULE_PAYMENT_PAYNETEASYFORM_DECLINED
+                     : MODULE_PAYMENT_PAYNETEASYFORM_TECHNICAL_ERROR
         );
     }
 
@@ -401,11 +406,11 @@ class payneteasyform
     /**
      * Redirect customer to payment result page with error message
      *
-     * @param       string      $error_message      Error message
+     * @param       string      $error_code         Error code: 'technical' or 'declined'
      */
-    protected function error_redirect($message = MODULE_PAYMENT_PAYNETEASYFORM_TECHNICAL_ERROR)
+    protected function error_redirect($error_code = 'technical')
     {
-        $params  = 'payment_error=' . $this->code . '&error=' . urlencode($message);
+        $params  = 'payment_error=' . $this->code . '&error=' . urlencode($error_code);
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, $params, 'SSL'));
     }
 
