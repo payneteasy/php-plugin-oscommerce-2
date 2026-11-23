@@ -105,7 +105,7 @@ class SaleFinisher
             $message = MODULE_PAYMENT_PAYNETEASYFORM_DECLINED;
 
             $this->cancel_order($order, $message);
-            $this->error_redirect($message);
+            $this->error_redirect('declined');
         }
     }
 
@@ -210,11 +210,11 @@ class SaleFinisher
     /**
      * Redirect customer to payment result page with error message
      *
-     * @param       string      $error_message      Error message
+     * @param       string      $error_code         Error code: 'technical' or 'declined'
      */
-    protected function error_redirect($message = MODULE_PAYMENT_PAYNETEASYFORM_TECHNICAL_ERROR)
+    protected function error_redirect($error_code = 'technical')
     {
-        $params  = 'payment_error=payneteasyform&error=' . urlencode($message);
+        $params  = 'payment_error=payneteasyform&error=' . urlencode($error_code);
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, $params, 'SSL'));
     }
 

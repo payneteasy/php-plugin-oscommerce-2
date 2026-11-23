@@ -84,7 +84,7 @@ class PaynetMailerAggregate
 
         $common_info  = EMAIL_TEXT_ORDER_NUMBER . ': ' . $order->info['order_id'] . "\n" .
         $common_info .= EMAIL_TEXT_INVOICE_URL  . ': ' . $invoice_url . "\n";
-        $common_info .= EMAIL_TEXT_DATE_ORDERED . ': ' . strftime(DATE_FORMAT_LONG) . "\n";
+        $common_info .= EMAIL_TEXT_DATE_ORDERED . ': ' . $this->format_long_date() . "\n";
 
         if ($order->info['comments'])
         {
@@ -181,5 +181,25 @@ class PaynetMailerAggregate
     protected function get_payment_description()
     {
         return "\n" . EMAIL_TEXT_PAYMENT_METHOD . ': ' . MODULE_PAYMENT_PAYNETEASYFORM_PUBLIC_TITLE . "\n\n";
+    }
+
+    /**
+     * Current date in the shop long date format.
+     * The format is written for strftime(), which is removed in PHP 9
+     * and deprecated since PHP 8.1: the common parts are converted for date().
+     *
+     * @return      string
+     */
+    protected function format_long_date()
+    {
+        $format = defined('DATE_FORMAT_LONG') ? DATE_FORMAT_LONG : '%A %d %B, %Y';
+
+        return date(strtr($format, array
+        (
+            '%A' => 'l', '%a' => 'D', '%d' => 'd', '%e' => 'j',
+            '%B' => 'F', '%b' => 'M', '%m' => 'm', '%Y' => 'Y',
+            '%y' => 'y', '%H' => 'H', '%M' => 'i', '%S' => 's',
+            '%%' => '%'
+        )));
     }
 }
