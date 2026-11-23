@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "payneteasy/php-library-payneteasy-api",
-            "version": "v1.1.0",
+            "version": "v1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/payneteasy/php-library-payneteasy-api.git",
-                "reference": "08e7aa7667a025f7b37cf348cbdb4a8c4bb3563c"
+                "reference": "d3880eee98e56a8e1a64ed96cc497d6d2eb53535"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/payneteasy/php-library-payneteasy-api/zipball/08e7aa7667a025f7b37cf348cbdb4a8c4bb3563c",
-                "reference": "08e7aa7667a025f7b37cf348cbdb4a8c4bb3563c",
+                "url": "https://api.github.com/repos/payneteasy/php-library-payneteasy-api/zipball/d3880eee98e56a8e1a64ed96cc497d6d2eb53535",
+                "reference": "d3880eee98e56a8e1a64ed96cc497d6d2eb53535",
                 "shasum": ""
             },
             "require": {
@@ -68,10 +68,10 @@
                 "payneteasy"
             ],
             "support": {
-                "source": "https://github.com/payneteasy/php-library-payneteasy-api/tree/v1.1.0",
+                "source": "https://github.com/payneteasy/php-library-payneteasy-api/tree/v1.1.1",
                 "issues": "https://github.com/payneteasy/php-library-payneteasy-api/issues"
             },
-            "time": "2026-11-19T10:02:01+00:00"
+            "time": "2026-11-23T14:44:43+00:00"
         }
     ],
     "packages-dev": [],
