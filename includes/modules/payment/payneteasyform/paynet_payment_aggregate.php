@@ -164,7 +164,16 @@ class PaynetPaymentAggregate
               ? (float) $oscommerce_order->info['currency_value']
               : 1.0;
 
-        return number_format((float) $oscommerce_order->info['total'] * $rate, 2, '.', '');
+        // As many decimals as the currency has (none for JPY), but not more than two:
+        // the request signature uses the amount multiplied by 100
+        $code     = isset($oscommerce_order->info['currency']) ? $oscommerce_order->info['currency'] : '';
+        $decimals = 2;
+        if (isset($GLOBALS['currencies']->currencies[$code]['decimal_places']))
+        {
+            $decimals = min(2, max(0, (int) $GLOBALS['currencies']->currencies[$code]['decimal_places']));
+        }
+
+        return number_format(round((float) $oscommerce_order->info['total'] * $rate, $decimals), $decimals, '.', '');
     }
 
     /**
