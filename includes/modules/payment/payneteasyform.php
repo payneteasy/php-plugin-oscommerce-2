@@ -95,8 +95,12 @@ class payneteasyform
         $this->title        = MODULE_PAYMENT_PAYNETEASYFORM_TITLE;
         $this->public_title = MODULE_PAYMENT_PAYNETEASYFORM_PUBLIC_TITLE;
         $this->description  = MODULE_PAYMENT_PAYNETEASYFORM_DESCRIPTION;
-        $this->sort_order   = MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER;
-        $this->enabled      = MODULE_PAYMENT_PAYNETEASYFORM_STATUS == 'Yes';
+        // The settings do not exist until the module is installed
+        $this->sort_order   = defined('MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER')
+                            ? MODULE_PAYMENT_PAYNETEASYFORM_SORT_ORDER
+                            : 0;
+        $this->enabled      = defined('MODULE_PAYMENT_PAYNETEASYFORM_STATUS')
+                            && MODULE_PAYMENT_PAYNETEASYFORM_STATUS == 'Yes';
     }
 
     /**
@@ -186,6 +190,20 @@ class payneteasyform
             $response = $this
                 ->get_payment_aggregate()
                 ->start_sale($order, $this->get_return_url($order));
+            ;
+
+            // The return is accepted only for the payment started here
+            if (strlen((string) $response->getPaymentPaynetId()) === 0)
+            {
+                throw new RuntimeException('The gateway did not return the payment id');
+            }
+
+            $this
+                ->get_database_aggregate()
+                ->insert_payment($order->info['order_id'],
+                                 $response->getPaymentPaynetId(),
+                                 $this->get_payment_aggregate()->get_order_amount($order),
+                                 $order->info['currency'])
             ;
         }
         catch (Exception $e)

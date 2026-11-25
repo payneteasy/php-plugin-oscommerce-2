@@ -114,7 +114,9 @@ class PaynetPaymentAggregate
         $paynet_payment
             ->setClientId($oscommerce_order->info['order_id'])
             ->setDescription($this->get_paynet_order_description($oscommerce_order))
-            ->setAmount($this->get_order_amount($oscommerce_order))
+            ->setAmount(isset($oscommerce_order->info['paynet_amount'])
+                        ? $oscommerce_order->info['paynet_amount']
+                        : $this->get_order_amount($oscommerce_order))
             ->setCurrency($oscommerce_order->info['currency'])
             ->setCustomer($paynet_customer)
             ->setBillingAddress($paynet_address)
@@ -158,7 +160,7 @@ class PaynetPaymentAggregate
      *
      * @return      string
      */
-    protected function get_order_amount(OsCommerceOrder $oscommerce_order)
+    public function get_order_amount(OsCommerceOrder $oscommerce_order)
     {
         $rate = isset($oscommerce_order->info['currency_value']) && (float) $oscommerce_order->info['currency_value'] > 0
               ? (float) $oscommerce_order->info['currency_value']
