@@ -79,10 +79,16 @@ class SaleFinisher
             $this->error_redirect();
         }
 
-        $order = $this->get_order($order_id, $callback_data);
+        $order = $this->get_order($order_id);
 
         try
         {
+            // Only the payment started for this order by this module can finish it
+            if (empty($order->info['paynet_order_id']))
+            {
+                throw new \RuntimeException('No payment was started for order ' . $order_id);
+            }
+
             $response = $this
                 ->get_payment_aggregate()
                 ->finish_sale($order, $callback_data);
@@ -148,14 +154,23 @@ class SaleFinisher
      *
      * @return      order                       Order object
      */
-    protected function get_order($order_id, array $callback_data)
+    protected function get_order($order_id)
     {
         $order = new OsCommerceOrder((int) $order_id);
         $order->info['order_id'] = $order_id;
 
-        if (!empty($callback_data['orderid']))
+        // The payment id and the amount are taken from the database, not from
+        // the request: the request is compared with them
+        $payment = $this
+            ->get_database_aggregate()
+            ->select_payment($order_id)
+        ;
+
+        if ($payment)
         {
-            $order->info['paynet_order_id'] = $callback_data['orderid'];
+            $order->info['paynet_order_id'] = $payment['paynet_order_id'];
+            $order->info['paynet_amount']   = $payment['amount'];
+            $order->info['currency']        = $payment['currency'];
         }
 
         return $order;

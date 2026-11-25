@@ -10,6 +10,70 @@ use order as OsCommerceOrder;
 class PaynetDatabaseAggregate
 {
     /**
+     * Table with the gateway payments started for the orders
+     */
+    const TABLE_PAYMENTS = 'payneteasyform_payments';
+
+    /**
+     * Create the payments table, if it does not exist yet
+     * (the module may be updated by copying the files, without reinstall)
+     */
+    public function ensure_payments_table()
+    {
+        tep_db_query(
+            "create table if not exists " . self::TABLE_PAYMENTS . " (" .
+            "id int unsigned not null auto_increment, " .
+            "orders_id int not null, " .
+            "paynet_order_id varchar(32) not null, " .
+            "amount varchar(16) not null, " .
+            "currency varchar(3) not null, " .
+            "date_added datetime not null, " .
+            "primary key (id), key idx_orders_id (orders_id))"
+        );
+    }
+
+    /**
+     * Save the gateway payment started for the order
+     *
+     * @param       integer     $order_id           Order id
+     * @param       string      $paynet_order_id    Payment id in the gateway
+     * @param       string      $amount             Amount sent to the gateway
+     * @param       string      $currency           Currency sent to the gateway
+     */
+    public function insert_payment($order_id, $paynet_order_id, $amount, $currency)
+    {
+        $this->ensure_payments_table();
+
+        tep_db_perform(self::TABLE_PAYMENTS, array
+        (
+            'orders_id'         => (int) $order_id,
+            'paynet_order_id'   => (string) $paynet_order_id,
+            'amount'            => (string) $amount,
+            'currency'          => (string) $currency,
+            'date_added'        => 'now()'
+        ));
+    }
+
+    /**
+     * Get the last gateway payment started for the order
+     *
+     * @param       integer     $order_id           Order id
+     *
+     * @return      array|null                      Row with paynet_order_id, amount and currency
+     */
+    public function select_payment($order_id)
+    {
+        $this->ensure_payments_table();
+
+        $row = tep_db_fetch_array(tep_db_query(
+            "select paynet_order_id, amount, currency from " . self::TABLE_PAYMENTS .
+            " where orders_id = '" . (int) $order_id . "' order by id desc limit 1"
+        ));
+
+        return $row ? $row : null;
+    }
+
+    /**
      * Save next OsCommerce order data to DB:
      * - order
      * - order totals
