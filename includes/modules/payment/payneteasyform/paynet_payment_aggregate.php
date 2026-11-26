@@ -140,7 +140,8 @@ class PaynetPaymentAggregate
         {
             $query_config
                 ->setRedirectUrl($redirect_url)
-                ->setCallbackUrl($redirect_url)
+                // The gateway's own notification is answered at once, without a redirect
+                ->setCallbackUrl($redirect_url . (strpos($redirect_url, '?') === false ? '?' : '&') . 'callback=1')
             ;
         }
 
