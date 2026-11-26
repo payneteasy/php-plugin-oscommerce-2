@@ -6,12 +6,23 @@ namespace PaynetEasy\PaynetEasyApi;
  * The gateway returns the customer with a cross-site POST, which carries no
  * SameSite=Lax shop cookie: the shop would start a new session and the customer
  * would lose the login and the cart. Re-issue the request as a GET to this URL
- * (with the gateway fields in the query) before the shop starts a session.
+ * before the shop starts a session. Only the fields that are checked go to the
+ * query: the other gateway fields (card and customer data) are not needed.
  */
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST))
 {
-    $query = array_merge($_GET, $_POST);
-    unset($query['osCsid']);
+    $request = array_merge($_GET, $_POST);
+    $query   = array();
+
+    foreach (array('order_id', 'status', 'orderid', 'paynet-order-id', 'client_orderid', 'merchant_order',
+                   'merchant-order-id', 'control', 'merchant_control', 'amount',
+                   'error_message', 'error-message', 'error_code', 'error-code') as $field)
+    {
+        if (isset($request[$field]) && is_scalar($request[$field]))
+        {
+            $query[$field] = (string) $request[$field];
+        }
+    }
 
     header('Location: ' . $_SERVER['SCRIPT_NAME'] . '?' . http_build_query($query), true, 303);
     exit;
@@ -59,6 +70,13 @@ class SaleFinisher
     protected $_mailer_aggregate;
 
     /**
+     * Name of the database lock held for the order, null if not held
+     *
+     * @var string|null
+     */
+    protected $_lock_name;
+
+    /**
      * Finish sale and redirect customer to payment result page
      *
      * @param       integer     $order_id           Order id to start sale
@@ -66,6 +84,16 @@ class SaleFinisher
     public function finish_sale($order_id, array $callback_data)
     {
         $order_id = (int) $order_id;
+
+        // The customer return and the gateway callback may come at the same time:
+        // the order is checked and updated by one request at a time.
+        // The lock is released before every redirect.
+        if (!$this->lock_order($order_id))
+        {
+            error_log('PaynetEasy: order ' . $order_id . ' is being processed by another request');
+            $this->error_redirect();
+        }
+
         $status   = $this->get_order_status_id($order_id);
 
         // Only an order waiting for payment changes its state
@@ -112,6 +140,43 @@ class SaleFinisher
 
             $this->cancel_order($order, $message);
             $this->error_redirect('declined');
+        }
+    }
+
+    /**
+     * Take the database lock of the order, wait for it up to 15 seconds
+     *
+     * @param       integer     $order_id       Order id
+     *
+     * @return      boolean                     False, if another request holds the lock
+     */
+    protected function lock_order($order_id)
+    {
+        $name = substr(DB_DATABASE, 0, 30) . '.payneteasyform_order_' . (int) $order_id;
+
+        $row = tep_db_fetch_array(tep_db_query(
+            "select get_lock('" . tep_db_input($name) . "', 15) as locked"
+        ));
+
+        if (!$row || (int) $row['locked'] !== 1)
+        {
+            return false;
+        }
+
+        $this->_lock_name = $name;
+
+        return true;
+    }
+
+    /**
+     * Release the database lock of the order, if it is held
+     */
+    protected function unlock_order()
+    {
+        if ($this->_lock_name !== null)
+        {
+            tep_db_query("select release_lock('" . tep_db_input($this->_lock_name) . "')");
+            $this->_lock_name = null;
         }
     }
 
@@ -229,6 +294,8 @@ class SaleFinisher
      */
     protected function error_redirect($error_code = 'technical')
     {
+        $this->unlock_order();
+
         $params  = 'payment_error=payneteasyform&error=' . urlencode($error_code);
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, $params, 'SSL'));
     }
@@ -238,6 +305,8 @@ class SaleFinisher
      */
     protected function success_redirect()
     {
+        $this->unlock_order();
+
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_SUCCESS, '', 'SSL'));
     }
 
