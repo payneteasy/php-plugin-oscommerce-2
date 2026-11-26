@@ -9,7 +9,12 @@ namespace PaynetEasy\PaynetEasyApi;
  * before the shop starts a session. Only the fields that are checked go to the
  * query: the other gateway fields (card and customer data) are not needed.
  */
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST))
+// The notification of the gateway itself has its own address (callback=1): it is
+// processed at once and answered with a short text, because the gateway may
+// not follow a redirect.
+$is_server_callback = isset($_GET['callback']) && $_GET['callback'] === '1';
+
+if (!$is_server_callback && isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST))
 {
     $request = array_merge($_GET, $_POST);
     $query   = array();
@@ -77,13 +82,21 @@ class SaleFinisher
     protected $_lock_name;
 
     /**
+     * True for the notification of the gateway itself: it gets a short text answer
+     *
+     * @var boolean
+     */
+    protected $_is_server_callback = false;
+
+    /**
      * Finish sale and redirect customer to payment result page
      *
      * @param       integer     $order_id           Order id to start sale
      */
-    public function finish_sale($order_id, array $callback_data)
+    public function finish_sale($order_id, array $callback_data, $is_server_callback = false)
     {
         $order_id = (int) $order_id;
+        $this->_is_server_callback = (bool) $is_server_callback;
 
         // The customer return and the gateway callback may come at the same time:
         // the order is checked and updated by one request at a time.
@@ -101,10 +114,25 @@ class SaleFinisher
         {
             if ($status === (int) MODULE_PAYMENT_PAYNETEASYFORM_SUCCESS_PAYMENT_ORDER_STATUS)
             {
+                // The order may have been paid by the server callback: the cart of the
+                // returning customer is cleared here
+                if (!$this->_is_server_callback && $this->is_order_of_session_customer($order_id))
+                {
+                    try
+                    {
+                        $this->clear_cart($this->get_order($order_id));
+                    }
+                    catch (\Exception $e)
+                    {
+                        $this->log_exception($e);
+                    }
+                }
+
                 $this->success_redirect();
             }
 
-            $this->error_redirect();
+            // A notification for an order that already has its result needs no repeat
+            $this->error_redirect($this->_is_server_callback && $status !== null ? 'declined' : 'technical');
         }
 
         $order = $this->get_order($order_id);
@@ -296,6 +324,17 @@ class SaleFinisher
     {
         $this->unlock_order();
 
+        if ($this->_is_server_callback)
+        {
+            // A declined payment is a processed notification too
+            if ($error_code !== 'declined')
+            {
+                header('HTTP/1.1 400 Bad Request');
+            }
+            echo $error_code === 'declined' ? 'OK' : 'ERROR';
+            exit;
+        }
+
         $params  = 'payment_error=payneteasyform&error=' . urlencode($error_code);
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_PAYMENT, $params, 'SSL'));
     }
@@ -306,6 +345,12 @@ class SaleFinisher
     protected function success_redirect()
     {
         $this->unlock_order();
+
+        if ($this->_is_server_callback)
+        {
+            echo 'OK';
+            exit;
+        }
 
         tep_redirect(tep_href_link(FILENAME_CHECKOUT_SUCCESS, '', 'SSL'));
     }
@@ -318,6 +363,27 @@ class SaleFinisher
      *
      * @param       order       $order              Order
      */
+    /**
+     * True, if the order belongs to the customer of the current session
+     *
+     * @param       integer     $order_id       Order id
+     *
+     * @return      boolean
+     */
+    protected function is_order_of_session_customer($order_id)
+    {
+        if (!tep_session_is_registered('customer_id') || empty($GLOBALS['customer_id']))
+        {
+            return false;
+        }
+
+        $row = tep_db_fetch_array(tep_db_query(
+            "select customers_id from " . TABLE_ORDERS . " where orders_id = '" . (int) $order_id . "'"
+        ));
+
+        return !empty($row['customers_id']) && (int) $row['customers_id'] === (int) $GLOBALS['customer_id'];
+    }
+
     protected function clear_cart(OsCommerceOrder $order)
     {
         $row = tep_db_fetch_array(tep_db_query(
@@ -400,4 +466,4 @@ class SaleFinisher
 }
 
 $sale_finisher = new SaleFinisher;
-$sale_finisher->finish_sale($_GET['order_id'], $_REQUEST);
+$sale_finisher->finish_sale(isset($_GET['order_id']) ? $_GET['order_id'] : 0, $_REQUEST, $is_server_callback);
